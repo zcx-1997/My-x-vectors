@@ -47,3 +47,16 @@ with open(filename,'r') as f:
     print(wavs_labels[0])
 
 
+a = torch.arange(12).view(3,4).float()
+b = torch.arange(1,13).view(3,4).float()
+cossim = torch.cosine_similarity(a,b)
+print(cossim)
+
+print("============TEST DATASET================")
+from data_loader import Vox1_Test
+
+test_db = Vox1_Test()
+
+
+
+

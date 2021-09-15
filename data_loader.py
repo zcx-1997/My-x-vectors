@@ -38,8 +38,6 @@ import torchaudio
 from torch.utils.data import Dataset, DataLoader
 from python_speech_features import fbank, mfcc
 
-train_dir = r'/home/zcx/datasets/VoxCeleb/vox1_dev_wav/wav'
-
 
 class Vox1_Train(Dataset):
     def __init__(self):
@@ -73,8 +71,48 @@ class Vox1_Train(Dataset):
         feats = mfcc(audio, sr, numcep=20, appendEnergy=True)
         return feats
 
+class Vox1_Test(Dataset):
+    def __init__(self):
+        self.random = random
+        self.test_dir = r'/home/zcx/datasets/VoxCeleb/vox1_test_wav/wav'
+        self.test_txt = r'data/veri_test.txt'
+        with open(self.test_txt, 'r') as f:
+            self.test_pairs = f.readlines()
+        # self.random.shuffle(self.test_pairs)
+        self.fixed_time = 10
+
+    def __getitem__(self, idx):
+        label_pairs = self.test_pairs[idx].split()
+        label = int(label_pairs[0])
+        enroll_path = os.path.join(self.test_dir,label_pairs[1])
+        test_path = os.path.join(self.test_dir,label_pairs[2])
+
+        enroll_feats = self._load_data(enroll_path)
+        enroll_feats = torch.tensor(enroll_feats, dtype=torch.float32)
+        test_feats = self._load_data(test_path)
+        test_feats = torch.tensor(test_feats, dtype=torch.float32)
+        label = torch.tensor(label)
+
+        return enroll_feats, test_feats, label
+
+
+    def __len__(self):
+        return len(self.test_pairs)
+
+    def _load_data(self, wav_path):
+        audio, sr = torchaudio.load(wav_path)
+        audio = audio.reshape(-1)
+        while len(audio) / sr < self.fixed_time:
+            audio = torch.cat((audio, audio))
+        time = len(audio) / sr
+        audio = audio[:sr * self.fixed_time]
+        time = len(audio) / sr  # 10s
+        feats = mfcc(audio, sr, numcep=20, appendEnergy=True)
+        return feats
+
 
 if __name__ == '__main__':
+    print("======================== TRAIN ============================")
     train_db = Vox1_Train()
     print(len(train_db))
     x, y = train_db[0]
@@ -83,6 +121,31 @@ if __name__ == '__main__':
 
     train_loader = DataLoader(train_db, batch_size=64, shuffle=True,
                               drop_last=True)
+    print(len(train_loader))
     x, y = next(iter(train_loader))
     print(x.shape)
     print(y.shape)
+
+    print("======================== TEST ============================")
+    test_db = Vox1_Test()
+    print(len(test_db))
+    x, y, label = test_db[0]
+    print(x.shape, x.dtype)
+    print(y.shape, y.dtype)
+    print(label, label.dtype)
+
+
+    test_loader = DataLoader(test_db, batch_size=64, shuffle=True,
+                              drop_last=True)
+    print(len(test_loader))
+    x, y, label = next(iter(test_loader))
+    print(x.shape)
+    print(y.shape)
+    print(label.shape)
+
+    for x,y,l in test_db:
+        print(x.shape, x.dtype)
+        print(y.shape, y.dtype)
+        print(l, l.dtype)
+        break
+
