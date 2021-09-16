@@ -46,7 +46,7 @@ class Vox1_Train(Dataset):
         with open(self.train_txt, 'r') as f:
             self.wavs_labels = f.readlines()
         self.random.shuffle(self.wavs_labels)
-        self.fixed_time = 10
+        self.fixed_time = 3
 
     def __getitem__(self, idx):
         wav_label = self.wavs_labels[idx].split()
@@ -68,18 +68,18 @@ class Vox1_Train(Dataset):
         time = len(audio) / sr
         audio = audio[:sr * self.fixed_time]
         time = len(audio) / sr  # 10s
-        feats = mfcc(audio, sr, numcep=20, appendEnergy=True)
+        feats = mfcc(audio, sr, numcep=30, appendEnergy=True)
         return feats
 
 class Vox1_Test(Dataset):
     def __init__(self):
         self.random = random
         self.test_dir = r'/home/zcx/datasets/VoxCeleb/vox1_test_wav/wav'
-        self.test_txt = r'data/veri_test.txt'
+        self.test_txt = r'data/veri_test100.txt'
         with open(self.test_txt, 'r') as f:
             self.test_pairs = f.readlines()
         # self.random.shuffle(self.test_pairs)
-        self.fixed_time = 10
+        self.fixed_time = 3
 
     def __getitem__(self, idx):
         label_pairs = self.test_pairs[idx].split()

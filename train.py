@@ -72,7 +72,7 @@ def train(device):
     net = net.to(device)
 
     criterion = nn.CrossEntropyLoss()
-    opt = optim.SGD(net.parameters(), 0.1)
+    opt = optim.SGD(net.parameters(), lr=0.1,momentum=0.9)
     # scheduler = torch.optim.lr_scheduler.StepLR(opt,step_size=50,gamma=0.5)
     writer = SummaryWriter()
 
@@ -118,9 +118,9 @@ def train(device):
                     f.write(message + '\n')
 
 
-        if checkpoint_dir is not None and (epoch + 1) % 2 == 0:
+        if checkpoint_dir is not None and (epoch + 1) % 1 == 0:
             net.eval().cpu()
-            ckpt_model_filename = "ckpt_epoch_" + str(epoch + 1) + ".pth"
+            ckpt_model_filename = "ckpt_epoch_3s_" + str(epoch + 1) + ".pth"
             ckpt_model_path = os.path.join(checkpoint_dir, ckpt_model_filename)
             torch.save(net.state_dict(), ckpt_model_path)
             net.to(device).train()
@@ -128,7 +128,7 @@ def train(device):
 
     # save model
     net.eval().cpu()
-    save_model_filename = "final_epoch_" + str(epoch + 1) + ".model"
+    save_model_filename = "final_epoch_3s_" + str(epoch + 1) + ".model"
     save_model_path = os.path.join(checkpoint_dir, save_model_filename)
     torch.save(net.state_dict(), save_model_path)
     print("\nDone, trained model saved at", save_model_path)
@@ -200,10 +200,10 @@ def test2(model_path):
 
     cosim_list = []
 
-    for i in range(1000):
-    # for enroll_data, test_data, label in test_db:
-        i = random.randint(1, len(test_db)-1)
-        enroll_data, test_data, label = test_db[i]
+    # for i in range(1000):
+    for enroll_data, test_data, label in test_db:
+        # i = random.randint(1, len(test_db)-1)
+        # enroll_data, test_data, label = test_db[i]
         enroll_data = enroll_data.unsqueeze(0).transpose(1, 2)
         test_data = test_data.unsqueeze(0).transpose(1, 2)
         enroll_o, enroll_a, enroll_b = net(enroll_data)
@@ -213,7 +213,6 @@ def test2(model_path):
         cos_b = torch.cosine_similarity(enroll_b, test_b)
 
         cosim_list.append((cos_a, label))
-
 
 
     def get_far(diff_same, same_same):
@@ -249,11 +248,11 @@ def test2(model_path):
 
 
 if __name__ == '__main__':
-    # device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    # print("Training on ", device)
-    # train(device)
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    print("Training on ", device)
+    train(device)
 
-    model_path = r'./checkpoints/final_epoch_10.model'
-    test2(model_path)
-    # acc = test(model_path)
-    # print("final_acc=%f "% acc)
+    # model_path = r'./checkpoints/final_epoch_10.model'
+    # test2(model_path)
+    # # acc = test(model_path)
+    # # print("final_acc=%f "% acc)
