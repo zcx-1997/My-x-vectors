@@ -39,7 +39,7 @@ import constants as c
 class My_E_TDNN(nn.Module):
     def __init__(self):
         super(My_E_TDNN, self).__init__()
-        self.tdnn1 = nn.Conv1d(in_channels=30, out_channels=512, kernel_size=5,
+        self.tdnn1 = nn.Conv1d(in_channels=25, out_channels=512, kernel_size=5,
                                dilation=1)
         self.tdnn2 = nn.Conv1d(in_channels=512, out_channels=512, kernel_size=3,
                                dilation=2)
@@ -76,14 +76,19 @@ class My_E_TDNN(nn.Module):
     def forward(self, x):
         # input: (batch,embedding_size,num_frames)
         # output: (batch, embeddings)
-        x = self.relu(self.fc1(self.bn1(self.relu(self.tdnn1(x)))))
-        x = self.relu(self.fc2(self.bn2(self.relu(self.tdnn2(x)))))
-        x = self.relu(self.fc3(self.bn3(self.relu(self.tdnn3(x)))))
-        x = self.relu(self.fc4(self.bn4(self.relu(self.tdnn4(x)))))
+        x = self.bn1(self.relu(self.tdnn1(x))).transpose(1, 2)
+        x = self.relu(self.fc1(x)).transpose(1, 2)
+        x = self.bn2(self.relu(self.tdnn2(x))).transpose(1, 2)
+        x = self.relu(self.fc2(x)).transpose(1, 2)
+        x = self.bn3(self.relu(self.tdnn3(x))).transpose(1, 2)
+        x = self.relu(self.fc3(x)).transpose(1, 2)
+        x = self.bn4(self.relu(self.tdnn4(x))).transpose(1, 2)
+        x = self.relu(self.fc4(x))
+
         x = self.relu(self.fc5(x))
         x = self.relu(self.fc6(x))
 
-        x_stat = torch.cat((x.mean(dim=2), x.std(dim=2)), dim=1)
+        x_stat = torch.cat((x.mean(dim=1), x.std(dim=1)), dim=1)
 
         embedding = self.embedding(x_stat)
         x = self.relu(embedding)

@@ -68,7 +68,7 @@ class Vox1_Train(Dataset):
         time = len(audio) / sr
         audio = audio[:sr * self.fixed_time]
         time = len(audio) / sr  # 10s
-        feats = mfcc(audio, sr, numcep=30, appendEnergy=True)
+        feats = mfcc(audio, sr, numcep=25, appendEnergy=True)
         return feats
 
 class Vox1_Test(Dataset):
@@ -107,7 +107,7 @@ class Vox1_Test(Dataset):
         time = len(audio) / sr
         audio = audio[:sr * self.fixed_time]
         time = len(audio) / sr  # 10s
-        feats = mfcc(audio, sr, numcep=20, appendEnergy=True)
+        feats = mfcc(audio, sr, numcep=25, appendEnergy=True)
         return feats
 
 

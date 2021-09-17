@@ -57,6 +57,15 @@ from data_loader import Vox1_Test
 
 test_db = Vox1_Test()
 
+x = torch.rand(2,3,4)
+net = torch.nn.Linear(4,1)
+y = net(x)
+print(y.shape)
+
+start_epoch = 5
+for epoch in range(start_epoch,10):
+    print(epoch)
+
 
 
 

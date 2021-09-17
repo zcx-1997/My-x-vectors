@@ -40,7 +40,7 @@ from torch.utils.tensorboard import SummaryWriter
 import constants as c
 from data_loader import Vox1_Train, Vox1_Test
 
-from model import MyTDNN
+from model import My_E_TDNN
 
 
 # 计算准确率
@@ -60,31 +60,37 @@ def accuracy(y_hat, y):
     return float(cmp.type(y.dtype).sum()) / len(y)
 
 
-def train(device):
+def train(device,model_path=None):
     checkpoint_dir = r'checkpoints'
     log_file = os.path.join(checkpoint_dir, 'logs')
     os.makedirs(checkpoint_dir, exist_ok=True)
 
     train_db = Vox1_Train()
-    train_loader = DataLoader(train_db, batch_size=64, shuffle=True,
+    train_loader = DataLoader(train_db, batch_size=128, shuffle=True,
                               drop_last=True)
-    net = MyTDNN()
-    net = net.to(device)
+    net = My_E_TDNN()
 
+    if model_path:
+        net.load_state_dict(torch.load(model_path))
+        start_epoch = 4
+    else:
+        start_epoch = 0
+
+    net = net.to(device)
     criterion = nn.CrossEntropyLoss()
     opt = optim.SGD(net.parameters(), lr=0.1,momentum=0.9)
     # scheduler = torch.optim.lr_scheduler.StepLR(opt,step_size=50,gamma=0.5)
     writer = SummaryWriter()
 
     print("start train ...")
-    for epoch in range(10):
+    for epoch in range(start_epoch,10):
         net.train()
         total_loss, epoch_rights, all_sample = 0, 0, 0
         step_rights = 0
         for step_id, (x, y) in enumerate(train_loader):
             x = x.transpose(1, 2).to(device)
             y = y.to(device)
-            y_hat, _, _ = net(x)
+            y_hat, _ = net(x)
             loss = criterion(y_hat, y)
             opt.zero_grad()
             loss.backward()
@@ -120,7 +126,7 @@ def train(device):
 
         if checkpoint_dir is not None and (epoch + 1) % 1 == 0:
             net.eval().cpu()
-            ckpt_model_filename = "ckpt_epoch_3s_" + str(epoch + 1) + ".pth"
+            ckpt_model_filename = "ckpt_epoch_" + str(epoch + 1) + ".pth"
             ckpt_model_path = os.path.join(checkpoint_dir, ckpt_model_filename)
             torch.save(net.state_dict(), ckpt_model_path)
             net.to(device).train()
@@ -128,7 +134,7 @@ def train(device):
 
     # save model
     net.eval().cpu()
-    save_model_filename = "final_epoch_3s_" + str(epoch + 1) + ".model"
+    save_model_filename = "final_epoch_" + str(epoch + 1) + ".model"
     save_model_path = os.path.join(checkpoint_dir, save_model_filename)
     torch.save(net.state_dict(), save_model_path)
     print("\nDone, trained model saved at", save_model_path)
@@ -248,9 +254,11 @@ def test2(model_path):
 
 
 if __name__ == '__main__':
+
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    model_path = r'./checkpoints/ckpt_epoch_4.pth'
     print("Training on ", device)
-    train(device)
+    train(device, model_path=model_path)
 
     # model_path = r'./checkpoints/final_epoch_10.model'
     # test2(model_path)
