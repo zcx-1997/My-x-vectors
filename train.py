@@ -72,7 +72,7 @@ def train(device,model_path=None):
 
     if model_path:
         net.load_state_dict(torch.load(model_path))
-        start_epoch = 4
+        start_epoch = 8
     else:
         start_epoch = 0
 
@@ -83,10 +83,10 @@ def train(device,model_path=None):
     writer = SummaryWriter()
 
     print("start train ...")
-    for epoch in range(start_epoch,10):
+    for epoch in range(start_epoch,16):
         net.train()
         total_loss, epoch_rights, all_sample = 0, 0, 0
-        step_rights = 0
+
         for step_id, (x, y) in enumerate(train_loader):
             x = x.transpose(1, 2).to(device)
             y = y.to(device)
@@ -198,9 +198,11 @@ def test(model_path):
         far = get_far(diff_same, same_same)
         frr = get_frr(same_diff, diff_diff)
         print("Threshold={}:far={},frr={}".format(thres, far, frr))
+
+
 def test2(model_path):
 
-    net = MyTDNN()
+    net = My_E_TDNN()
     net.load_state_dict(torch.load(model_path))
     test_db = Vox1_Test()
 
@@ -212,11 +214,11 @@ def test2(model_path):
         # enroll_data, test_data, label = test_db[i]
         enroll_data = enroll_data.unsqueeze(0).transpose(1, 2)
         test_data = test_data.unsqueeze(0).transpose(1, 2)
-        enroll_o, enroll_a, enroll_b = net(enroll_data)
-        test_o, test_a, test_b = net(test_data)
+        enroll_o, enroll_a = net(enroll_data)
+        test_o, test_a = net(test_data)
         cos_o = torch.cosine_similarity(enroll_o, test_o)
         cos_a = torch.cosine_similarity(enroll_a, test_a)
-        cos_b = torch.cosine_similarity(enroll_b, test_b)
+        # cos_b = torch.cosine_similarity(enroll_b, test_b)
 
         cosim_list.append((cos_a, label))
 
@@ -235,7 +237,7 @@ def test2(model_path):
             frr = same_diff / (same_diff+diff_diff)
         return frr
 
-    for thres in [0.001 * i + 0.9 for i in range(100)]:  # [0.9 ~ 1]
+    for thres in [0.0001 * i + 0.8 for i in range(2000)]:  # [0.9 ~ 1]
         same_same, same_diff, diff_same, diff_diff = 0, 0, 0, 0
         for cossim, label in cosim_list:
             if label:
@@ -255,12 +257,12 @@ def test2(model_path):
 
 if __name__ == '__main__':
 
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    model_path = r'./checkpoints/ckpt_epoch_4.pth'
-    print("Training on ", device)
-    train(device, model_path=model_path)
+    # device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    # model_path = r'./checkpoints/ckpt_epoch_8.pth'
+    # print("Training on ", device)
+    # train(device, model_path=model_path)
 
-    # model_path = r'./checkpoints/final_epoch_10.model'
-    # test2(model_path)
-    # # acc = test(model_path)
-    # # print("final_acc=%f "% acc)
+    model_path = r'./checkpoints/final_epoch_16.model'
+    test2(model_path)
+    # acc = test(model_path)
+    # print("final_acc=%f "% acc)
