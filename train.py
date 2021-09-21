@@ -67,23 +67,23 @@ def train(device,model_path=None):
 
     train_db = Vox1_Train()
     train_loader = DataLoader(train_db, batch_size=128, shuffle=True,
-                              drop_last=True)
+                              drop_last=True,num_workers=3)
     net = My_E_TDNN()
 
     if model_path:
         net.load_state_dict(torch.load(model_path))
-        start_epoch = 8
+        start_epoch = 20
     else:
         start_epoch = 0
 
     net = net.to(device)
     criterion = nn.CrossEntropyLoss()
-    opt = optim.SGD(net.parameters(), lr=0.1,momentum=0.9)
-    # scheduler = torch.optim.lr_scheduler.StepLR(opt,step_size=50,gamma=0.5)
+    opt = optim.SGD(net.parameters(), lr=0.01, momentum=0.9)
+    # scheduler = torch.optim.lr_scheduler.StepLR(opt, step_size=5,gamma=0.1)
     writer = SummaryWriter()
 
     print("start train ...")
-    for epoch in range(start_epoch,16):
+    for epoch in range(start_epoch, start_epoch+10):
         net.train()
         total_loss, epoch_rights, all_sample = 0, 0, 0
 
@@ -96,6 +96,7 @@ def train(device,model_path=None):
             loss.backward()
             opt.step()
             # scheduler.step()
+            # print("lr=",lr)
 
             writer.add_scalar("loss", loss, epoch * step_id)
 
@@ -124,7 +125,7 @@ def train(device,model_path=None):
                     f.write(message + '\n')
 
 
-        if checkpoint_dir is not None and (epoch + 1) % 1 == 0:
+        if checkpoint_dir is not None and (epoch + 1) % 5 == 0:
             net.eval().cpu()
             ckpt_model_filename = "ckpt_epoch_" + str(epoch + 1) + ".pth"
             ckpt_model_path = os.path.join(checkpoint_dir, ckpt_model_filename)
@@ -257,12 +258,13 @@ def test2(model_path):
 
 if __name__ == '__main__':
 
-    # device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    # model_path = r'./checkpoints/ckpt_epoch_8.pth'
-    # print("Training on ", device)
-    # train(device, model_path=model_path)
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    model_path = r'./checkpoints/final_epoch_20.model'
+    print("Training on:", device)
+    # train(device,model_path)
+    train(device, model_path=model_path)
 
-    model_path = r'./checkpoints/final_epoch_16.model'
-    test2(model_path)
-    # acc = test(model_path)
-    # print("final_acc=%f "% acc)
+    # model_path = r'./checkpoints/ckpt_epoch_20.pth'
+    # test2(model_path)
+    # # acc = test(model_path)
+    # # print("final_acc=%f "% acc)

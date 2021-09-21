@@ -31,6 +31,7 @@
 import os
 import glob
 import random
+import time
 
 import torch
 import torchaudio
@@ -46,7 +47,7 @@ class Vox1_Train(Dataset):
         with open(self.train_txt, 'r') as f:
             self.wavs_labels = f.readlines()
         self.random.shuffle(self.wavs_labels)
-        self.fixed_time = 3
+        self.fixed_time = 10
 
     def __getitem__(self, idx):
         wav_label = self.wavs_labels[idx].split()
@@ -79,7 +80,7 @@ class Vox1_Test(Dataset):
         with open(self.test_txt, 'r') as f:
             self.test_pairs = f.readlines()
         # self.random.shuffle(self.test_pairs)
-        self.fixed_time = 3
+        self.fixed_time = 10
 
     def __getitem__(self, idx):
         label_pairs = self.test_pairs[idx].split()
@@ -119,12 +120,35 @@ if __name__ == '__main__':
     print(x.shape, x.dtype)
     print(y, y.dtype)
 
+    print("单线程：")
+    print(time.ctime())
     train_loader = DataLoader(train_db, batch_size=64, shuffle=True,
                               drop_last=True)
+
+
     print(len(train_loader))
-    x, y = next(iter(train_loader))
-    print(x.shape)
-    print(y.shape)
+    for i,(x,l) in enumerate(train_loader):
+        if i < 10:
+            pass
+            print(time.ctime())
+        else:
+            break
+    print("done\n",time.ctime())
+
+    print("多线程：")
+    print(time.ctime())
+    train_loader = DataLoader(train_db, batch_size=64, shuffle=True,
+                              drop_last=True,num_workers=6)
+
+    print(len(train_loader))
+    for i,(x,l) in enumerate(train_loader):
+        if i < 10:
+            pass
+            print(time.ctime())
+        else:
+            break
+    print("done\n", time.ctime())
+
 
     print("======================== TEST ============================")
     test_db = Vox1_Test()
@@ -135,6 +159,7 @@ if __name__ == '__main__':
     print(label, label.dtype)
 
 
+
     test_loader = DataLoader(test_db, batch_size=64, shuffle=True,
                               drop_last=True)
     print(len(test_loader))
@@ -143,9 +168,8 @@ if __name__ == '__main__':
     print(y.shape)
     print(label.shape)
 
-    for x,y,l in test_db:
+    for x, y, l in test_db:
         print(x.shape, x.dtype)
         print(y.shape, y.dtype)
         print(l, l.dtype)
         break
-
