@@ -30,9 +30,12 @@
 """
 import os
 import glob
+import random
 
 train_dir = r'/home/zcx/datasets/VoxCeleb/vox1_dev_wav/wav'
 spks_list = os.listdir(train_dir)
+# random.shuffle(spks_list)
+# spks_list = spks_list[:500]
 
 with open('data/vox1_train.txt','w') as f:
     for spk_name in spks_list:

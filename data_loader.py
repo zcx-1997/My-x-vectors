@@ -33,21 +33,21 @@ import glob
 import random
 import time
 
+import numpy
 import torch
 import torchaudio
 
 from torch.utils.data import Dataset, DataLoader
-from python_speech_features import fbank, mfcc
-
+from python_speech_features import fbank, mfcc, delta
 
 class Vox1_Train(Dataset):
     def __init__(self):
         self.random = random
-        self.train_txt = r'data/vox1_train.txt'
+        self.train_txt = r'data/vox1_train_100.txt'
         with open(self.train_txt, 'r') as f:
             self.wavs_labels = f.readlines()
         self.random.shuffle(self.wavs_labels)
-        self.fixed_time = 10
+        self.fixed_time = 5
 
     def __getitem__(self, idx):
         wav_label = self.wavs_labels[idx].split()
@@ -67,9 +67,13 @@ class Vox1_Train(Dataset):
         while len(audio) / sr < self.fixed_time:
             audio = torch.cat((audio, audio))
         time = len(audio) / sr
+
         audio = audio[:sr * self.fixed_time]
         time = len(audio) / sr  # 10s
-        feats = mfcc(audio, sr, numcep=25, appendEnergy=True)
+
+        mfcc_f = mfcc(audio, sr, appendEnergy=True)
+        delta_f = delta(mfcc_f, 2)
+        feats = numpy.hstack((mfcc_f, delta_f))
         return feats
 
 class Vox1_Test(Dataset):
@@ -80,7 +84,7 @@ class Vox1_Test(Dataset):
         with open(self.test_txt, 'r') as f:
             self.test_pairs = f.readlines()
         # self.random.shuffle(self.test_pairs)
-        self.fixed_time = 10
+        self.fixed_time = 5
 
     def __getitem__(self, idx):
         label_pairs = self.test_pairs[idx].split()
@@ -108,7 +112,10 @@ class Vox1_Test(Dataset):
         time = len(audio) / sr
         audio = audio[:sr * self.fixed_time]
         time = len(audio) / sr  # 10s
-        feats = mfcc(audio, sr, numcep=25, appendEnergy=True)
+        mfcc_f = mfcc(audio, sr, appendEnergy=True)
+        delta_f = delta(mfcc_f, 2)
+        feats = numpy.hstack((mfcc_f, delta_f))
+        # feats = mfcc(audio, sr, numcep=25, appendEnergy=True)
         return feats
 
 
@@ -120,34 +127,34 @@ if __name__ == '__main__':
     print(x.shape, x.dtype)
     print(y, y.dtype)
 
-    print("单线程：")
-    print(time.ctime())
-    train_loader = DataLoader(train_db, batch_size=64, shuffle=True,
-                              drop_last=True)
+    # print("单线程：")
+    # print(time.ctime())
+    # train_loader = DataLoader(train_db, batch_size=64, shuffle=True,
+    #                           drop_last=True)
+    #
+    #
+    # print(len(train_loader))
+    # for i,(x,l) in enumerate(train_loader):
+    #     if i < 10:
+    #         pass
+    #         print(time.ctime())
+    #     else:
+    #         break
+    # print("done\n",time.ctime())
 
-
-    print(len(train_loader))
-    for i,(x,l) in enumerate(train_loader):
-        if i < 10:
-            pass
-            print(time.ctime())
-        else:
-            break
-    print("done\n",time.ctime())
-
-    print("多线程：")
-    print(time.ctime())
-    train_loader = DataLoader(train_db, batch_size=64, shuffle=True,
-                              drop_last=True,num_workers=6)
-
-    print(len(train_loader))
-    for i,(x,l) in enumerate(train_loader):
-        if i < 10:
-            pass
-            print(time.ctime())
-        else:
-            break
-    print("done\n", time.ctime())
+    # print("多线程：")
+    # print(time.ctime())
+    # train_loader = DataLoader(train_db, batch_size=64, shuffle=True,
+    #                           drop_last=True,num_workers=6)
+    #
+    # print(len(train_loader))
+    # for i,(x,l) in enumerate(train_loader):
+    #     if i < 10:
+    #         pass
+    #         print(time.ctime())
+    #     else:
+    #         break
+    # print("done\n", time.ctime())
 
 
     print("======================== TEST ============================")

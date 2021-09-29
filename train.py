@@ -40,7 +40,7 @@ from torch.utils.tensorboard import SummaryWriter
 import constants as c
 from data_loader import Vox1_Train, Vox1_Test
 
-from model import My_E_TDNN
+from model import My_E_TDNN, TDNN
 
 
 # 计算准确率
@@ -60,30 +60,80 @@ def accuracy(y_hat, y):
     return float(cmp.type(y.dtype).sum()) / len(y)
 
 
-def train(device,model_path=None):
+def get_far(diff_same, same_same):
+    if (diff_same + same_same) == 0:
+        far = 0
+    else:
+        far = diff_same / (diff_same + same_same)
+    return far
+
+
+def get_frr(same_diff, diff_diff):
+    if (same_diff + diff_diff) == 0:
+        frr = 0
+    else:
+        frr = same_diff / (same_diff + diff_diff)
+    return frr
+
+
+def get_eer(cosim_list):
+    diff = 1
+    eer = 0
+    eer_thre = 0
+
+    for thres in [0.001 * i + 0.8 for i in range(200)]:  # [0.9 ~ 1]
+        same_same, same_diff, diff_same, diff_diff = 0, 0, 0, 0
+        for cossim, label in cosim_list:
+            if label:
+                if cossim >= thres:
+                    same_same += 1
+                else:
+                    same_diff += 1
+            else:
+                if cossim >= thres:
+                    diff_same += 1
+                else:
+                    diff_diff += 1
+
+        far = get_far(diff_same, same_same)
+
+        frr = get_frr(same_diff, diff_diff)
+        print(thres,far, frr)
+
+        if diff > abs(far - frr):
+            diff = abs(far - frr)
+            eer = (far + frr) / 2
+            threshold = thres
+
+            print(threshold)
+
+    return eer, threshold
+
+
+def train(device, model_path=None):
     checkpoint_dir = r'checkpoints'
     log_file = os.path.join(checkpoint_dir, 'logs')
     os.makedirs(checkpoint_dir, exist_ok=True)
 
     train_db = Vox1_Train()
     train_loader = DataLoader(train_db, batch_size=128, shuffle=True,
-                              drop_last=True,num_workers=3)
-    net = My_E_TDNN()
+                              drop_last=True)
+    net = TDNN()
 
     if model_path:
         net.load_state_dict(torch.load(model_path))
-        start_epoch = 20
+        start_epoch = 30
     else:
         start_epoch = 0
 
     net = net.to(device)
     criterion = nn.CrossEntropyLoss()
-    opt = optim.SGD(net.parameters(), lr=0.01, momentum=0.9)
+    opt = optim.SGD(net.parameters(), lr=0.001, momentum=0.9)
     # scheduler = torch.optim.lr_scheduler.StepLR(opt, step_size=5,gamma=0.1)
     writer = SummaryWriter()
 
     print("start train ...")
-    for epoch in range(start_epoch, start_epoch+10):
+    for epoch in range(start_epoch, start_epoch+100):
         net.train()
         total_loss, epoch_rights, all_sample = 0, 0, 0
 
@@ -203,7 +253,7 @@ def test(model_path):
 
 def test2(model_path):
 
-    net = My_E_TDNN()
+    net = TDNN()
     net.load_state_dict(torch.load(model_path))
     test_db = Vox1_Test()
 
@@ -222,49 +272,19 @@ def test2(model_path):
         # cos_b = torch.cosine_similarity(enroll_b, test_b)
 
         cosim_list.append((cos_a, label))
-
-
-    def get_far(diff_same, same_same):
-        if (diff_same+same_same) == 0:
-            far = 0
-        else:
-            far = diff_same / (diff_same + same_same)
-        return far
-
-    def get_frr(same_diff, diff_diff):
-        if (same_diff+diff_diff) == 0:
-            frr = 0
-        else:
-            frr = same_diff / (same_diff+diff_diff)
-        return frr
-
-    for thres in [0.0001 * i + 0.8 for i in range(2000)]:  # [0.9 ~ 1]
-        same_same, same_diff, diff_same, diff_diff = 0, 0, 0, 0
-        for cossim, label in cosim_list:
-            if label:
-                if cossim >= thres:
-                    same_same += 1
-                else:
-                    same_diff += 1
-            else:
-                if cossim >= thres:
-                    diff_same += 1
-                else:
-                    diff_diff += 1
-        far = get_far(diff_same, same_same)
-        frr = get_frr(same_diff, diff_diff)
-        print("Threshold={}:far={},frr={}".format(thres, far, frr))
+    eer, threshold = get_eer(cosim_list)
+    print("Threshold={}:eer={}".format(threshold,eer))
 
 
 if __name__ == '__main__':
 
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    model_path = r'./checkpoints/final_epoch_20.model'
-    print("Training on:", device)
-    # train(device,model_path)
-    train(device, model_path=model_path)
+    # device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    # model_path = r'./checkpoints/final_epoch_30.model'
+    # print("Training on:", device)
+    # train(device)
+    # train(device, model_path=model_path)
 
-    # model_path = r'./checkpoints/ckpt_epoch_20.pth'
-    # test2(model_path)
-    # # acc = test(model_path)
+    model_path = r'./checkpoints/final_epoch_100.model'
+    test2(model_path)
+    # acc = test(model_path)
     # # print("final_acc=%f "% acc)
